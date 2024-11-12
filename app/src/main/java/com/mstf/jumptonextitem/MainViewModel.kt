@@ -26,7 +26,7 @@ class MainViewModel : ViewModel() {
             chats = listOf(
                 makeChat("Mr. White", White),
                 makeChat("Mr. Black", Black),
-                makeChat("Mr. Green", Green),
+                makeChat("Mr. Green", Green, unread = true, firstUnreadIndex = 7),
                 makeChat("Mr. Red", Red),
                 makeChat("Mr. Blue", Blue),
                 makeChat("Mr. Gray", Gray),
@@ -37,25 +37,29 @@ class MainViewModel : ViewModel() {
         )
     }
 
-    private fun makeChat(title: String, tint: Color, unread: Boolean = false): MainUiState.Chat =
-        MainUiState.Chat(
-            title = title,
-            image = R.drawable.ic_account,
-            tint = tint,
-            messages = (1..10).map {
-                var text = ""
-                repeat((30..250).random()) { text += "a" }
-                text
-            },
-            unread = unread,
-        )
+    private fun makeChat(
+        title: String,
+        tint: Color,
+        unread: Boolean = false,
+        firstUnreadIndex: Int = 0,
+    ) = MainUiState.Chat(
+        title = title,
+        image = R.drawable.ic_account,
+        tint = tint,
+        messages = (1..30).map {
+            var text = ""
+            repeat((10..50).random()) { text += " " }
+            text
+        },
+        unread = unread,
+        firstUnreadIndex = firstUnreadIndex,
+    )
 
     fun onChatSelect(chat: MainUiState.Chat) {
         _uiState.value = uiState.value.copy(
             selectedChat = chat,
         )
     }
-
 }
 
 data class MainUiState(
@@ -68,5 +72,6 @@ data class MainUiState(
         val tint: Color,
         val messages: List<String> = arrayListOf(),
         val unread: Boolean = false,
+        val firstUnreadIndex: Int = 0,
     )
 }

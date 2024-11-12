@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
@@ -40,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -93,14 +93,16 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
                     .fillMaxHeight(),
                 contentAlignment = Alignment.Center
             ) {
-                if (state.selectedChat == null)
+                state.selectedChat?.let { chat ->
+                    ChatMessages(chat)
+                } ?: run {
                     Text(
                         "Select a chat",
                         color = Color.DarkGray,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                else ChatMessages()
+                }
             }
         }
     }
@@ -157,8 +159,7 @@ fun ChatList(
 }
 
 @Composable
-fun ChatMessages(modifier: Modifier = Modifier) {
-    val items = remember { (1..20).map { "Item #$it" } }
+fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val lazyListState = rememberLazyListState()
@@ -233,7 +234,7 @@ fun ChatMessages(modifier: Modifier = Modifier) {
                                         // Log.d(TAG, "=== isAnimating? = $isAnimating")
 
                                         if (!isAnimating) {
-                                            if (!lazyListState.canScrollForward) {
+                                            if (!lazyListState.canScrollBackward) {
                                                 scope.launch {
                                                     listYOffset.snapTo(
                                                         (listYOffset.value + dragAmount)
@@ -320,8 +321,6 @@ fun ChatMessages(modifier: Modifier = Modifier) {
                                                     isAnimating = false
                                                 }
                                             }
-
-
                                         }
                                     }
                                 }
@@ -346,12 +345,12 @@ fun ChatMessages(modifier: Modifier = Modifier) {
                     )
                 },
             state = lazyListState,
+            reverseLayout = true,
         ) {
-            items(items) { item ->
+            items(chat.messages) { item ->
                 Text(
                     item,
                     modifier = Modifier
-                        .fillMaxWidth()
                         .padding(8.dp)
                         .background(Color.LightGray)
                         .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -419,6 +418,12 @@ fun ChatMessages(modifier: Modifier = Modifier) {
             ) {
                 Text("Item Name", modifier = Modifier.padding(top = 24.dp))
             }
+        }
+    }
+
+    LaunchedEffect(chat) {
+        scope.launch {
+            lazyListState.animateScrollToItem(chat.firstUnreadIndex)
         }
     }
 }
