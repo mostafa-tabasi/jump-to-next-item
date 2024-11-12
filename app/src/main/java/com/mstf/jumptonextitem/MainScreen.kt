@@ -2,19 +2,26 @@ package com.mstf.jumptonextitem
 
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +29,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -29,8 +37,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +60,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -60,6 +71,93 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewModel()) {
+    val state by viewModel.uiState.collectAsState()
+    Surface(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues),
+    ) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            ChatList(
+                chats = state.chats,
+                selectedChat = state.selectedChat,
+                modifier = Modifier
+                    .wrapContentWidth()
+                    .animateContentSize()
+                    .background(color = Color.LightGray),
+                onChatSelect = viewModel::onChatSelect,
+            )
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                if (state.selectedChat == null)
+                    Text(
+                        "Select a chat",
+                        color = Color.DarkGray,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                else ChatMessages()
+            }
+        }
+    }
+
+}
+
+@Composable
+fun ChatList(
+    chats: List<MainUiState.Chat>,
+    selectedChat: MainUiState.Chat?,
+    modifier: Modifier = Modifier,
+    onChatSelect: (MainUiState.Chat) -> Unit,
+) {
+    LazyColumn(modifier) {
+        items(chats) { chat ->
+            Row(
+                modifier = Modifier
+                    .clickable { onChatSelect(chat) }
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(chat.tint),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(chat.image),
+                        contentDescription = null,
+                        tint = Color.DarkGray,
+                    )
+                }
+                AnimatedVisibility(
+                    visible = selectedChat == null,
+                    exit = fadeOut() + shrinkHorizontally(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh,
+                        )
+                    ),
+                ) {
+                    Text(
+                        chat.title,
+                        modifier = Modifier
+                            .width(100.dp)
+                            .padding(start = 8.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ChatMessages(modifier: Modifier = Modifier) {
     val items = remember { (1..20).map { "Item #$it" } }
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -99,9 +197,8 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
         }
     }
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
-            .padding(paddingValues)
             .nestedScroll(nestedScrollConnection)
             .pointerInput(Unit) {
                 coroutineScope {
