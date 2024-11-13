@@ -1,6 +1,5 @@
 package com.mstf.jumptonextitem
 
-import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -10,6 +9,8 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -39,8 +40,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -91,13 +90,13 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
     ) {
         Row(modifier = Modifier.fillMaxSize()) {
             ChatList(
-                chats = state.chats,
-                selectedChat = state.selectedChat,
                 modifier = Modifier
                     .wrapContentWidth()
                     .fillMaxHeight()
                     .animateContentSize()
                     .background(color = Color.LightGray),
+                chats = state.chats,
+                selectedChat = state.selectedChat,
                 onChatSelect = viewModel::onChatSelect,
             )
             Box(
@@ -107,11 +106,17 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
                 contentAlignment = Alignment.Center
             ) {
                 state.selectedChat?.let { chat ->
-                    ChatMessages(chat)
+                    ChatMessages(
+                        messages = chat.messages,
+                        firstUnreadMessageIndex = chat.firstUnreadIndex,
+                        nextUnreadChat = state.chats.firstOrNull { it.unread && it != chat },
+                        onJumpToNextChat = viewModel::onChatSelect,
+                    )
                 } ?: run {
                     Text(
                         "Select a chat",
-                        color = Color.DarkGray,
+                        color = Color.Gray,
+                        fontSize = 18.sp,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -123,96 +128,129 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
 
 @Composable
 private fun ChatList(
+    modifier: Modifier = Modifier,
     chats: List<MainUiState.Chat>,
     selectedChat: MainUiState.Chat?,
-    modifier: Modifier = Modifier,
     onChatSelect: (MainUiState.Chat) -> Unit,
 ) {
-    LazyColumn(modifier) {
+    LazyColumn(
+        modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         items(chats) { chat ->
-            Row(
+            val isChatSelected = chat == selectedChat
+            Chat(
                 modifier = Modifier
-                    .clickable { onChatSelect(chat) }
+                    .conditional(!isChatSelected, { clickable { onChatSelect(chat) } })
+                    .background(if (isChatSelected) Color.Gray.copy(alpha = 0.5f) else Color.LightGray)
                     .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                val constraints = ConstraintSet {
-                    val unreadBadge = createRefFor("unread_badge")
-                    constrain(unreadBadge) {
-                        top.linkTo(parent.top, margin = (-4).dp)
-                        end.linkTo(parent.end, margin = (-4).dp)
-                    }
-                }
-                ConstraintLayout(
-                    constraints,
-                    modifier = Modifier
-                        .size(50.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .background(chat.tint),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            painter = painterResource(chat.image),
-                            contentDescription = null,
-                            tint = Color.DarkGray,
-                        )
-                    }
-                    if (chat.unread) {
-                        Box(
-                            modifier = Modifier
-                                .layoutId("unread_badge")
-                                .sizeIn(minWidth = 20.dp)
-                                .background(Color.Red, shape = CircleShape)
-                                .border(width = 2.dp, color = Color.LightGray, shape = CircleShape),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            val unreadCount =
-                                (chat.firstUnreadIndex + 1).let {
-                                    when {
-                                        it < 10 -> " $it "
-                                        it in 10..99 -> "$it"
-                                        else -> "+99"
-                                    }
-                                }
-                            Text(
-                                unreadCount,
-                                color = Color.White,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 6.dp)
-                            )
-                        }
-                    }
-                }
-                AnimatedVisibility(
-                    visible = selectedChat == null,
-                    exit = fadeOut() + shrinkHorizontally(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessHigh,
-                        )
-                    ),
-                ) {
-                    Text(
-                        chat.title,
-                        modifier = Modifier
-                            .width(100.dp)
-                            .padding(start = 8.dp),
-                    )
-                }
-            }
+                chat = chat,
+                showTitle = selectedChat == null,
+                showUnreadBadge = true,
+            )
         }
     }
 }
 
 @Composable
-private fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) {
-    val messages = remember(chat) { chat.messages }
+private fun Chat(
+    modifier: Modifier = Modifier,
+    chat: MainUiState.Chat,
+    showTitle: Boolean,
+    showUnreadBadge: Boolean = true,
+    unreadBadgeColor: Color = Color.Red,
+    unreadBadgeBorderColor: Color = Color.LightGray,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        val constraints = ConstraintSet {
+            val unreadBadge = createRefFor("unread_badge")
+            constrain(unreadBadge) {
+                top.linkTo(parent.top, margin = (-4).dp)
+                end.linkTo(parent.end, margin = (-4).dp)
+            }
+        }
+        ConstraintLayout(
+            constraints,
+            modifier = Modifier.size(50.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(chat.backgroundTint),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(chat.image),
+                    contentDescription = null,
+                    tint = chat.imageTint,
+                )
+            }
+            AnimatedVisibility(
+                visible = chat.unread && showUnreadBadge,
+                modifier = Modifier
+                    .layoutId("unread_badge"),
+                enter = scaleIn(animationSpec = spring()),
+                exit = scaleOut(animationSpec = spring()),
+                label = "unread_badge"
+            ) {
+                Box(
+                    modifier = Modifier
+                        .sizeIn(minWidth = 20.dp)
+                        .background(unreadBadgeColor, shape = CircleShape)
+                        .border(width = 2.dp, color = unreadBadgeBorderColor, shape = CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val unreadCount =
+                        chat.firstUnreadIndex.let {
+                            when {
+                                it == null -> ""
+                                it < 9 -> " ${it.plus(1)} "
+                                it in 9..98 -> "${it.plus(1)}"
+                                else -> "+99"
+                            }
+                        }
+                    Text(
+                        unreadCount,
+                        color = Color.White,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp)
+                    )
+                }
+            }
+        }
+        AnimatedVisibility(
+            visible = showTitle,
+            exit = fadeOut() + shrinkHorizontally(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessHigh,
+                )
+            ),
+        ) {
+            Text(
+                chat.title,
+                modifier = Modifier
+                    .width(100.dp)
+                    .padding(start = 8.dp),
+            )
+        }
+    }
+}
 
+@Composable
+private fun ChatMessages(
+    modifier: Modifier = Modifier,
+    messages: List<MainUiState.Chat.Message>,
+    firstUnreadMessageIndex: Int?,
+    nextUnreadChat: MainUiState.Chat?,
+    onJumpToNextChat: (MainUiState.Chat) -> Unit,
+) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val lazyListState = rememberLazyListState()
@@ -222,17 +260,30 @@ private fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) 
     val nextItemLayoutHeight = remember { Animatable(0f) }
     val nextItemLayoutWidth = remember { Animatable(0f) }
     val nextItemLayoutBottomMargin = remember { Animatable(with(density) { 8.dp.toPx() }) }
-    val nextItemLayoutPadding = remember { Animatable(with(density) { 4.dp.toPx() }) }
+    val nextItemLayoutPadding = remember { Animatable(with(density) { 6.dp.toPx() }) }
 
     var listHeight by remember { mutableIntStateOf(0) }
 
     var isAnimating by remember { mutableStateOf(false) }
 
+    fun openedEnoughToShowNextChatIcon(): Boolean {
+        return if (nextUnreadChat != null)
+            listYOffset.value < with(density) { (minListYOffset / 3 * 2).toPx() }
+        else listYOffset.value == with(density) { minListYOffset.toPx() }
+    }
+
     val nextItemIconSize by animateDpAsState(
         targetValue =
-        if (listYOffset.value < with(density) { (minListYOffset / 3 * 2).toPx() }) 50.dp
+        if (openedEnoughToShowNextChatIcon()) 50.dp
         else 0.dp,
         label = "next_item_size"
+    )
+
+    val arrowUpMargin by animateDpAsState(
+        targetValue =
+        if (openedEnoughToShowNextChatIcon()) 6.dp
+        else 0.dp,
+        label = "arrow_up_margin"
     )
 
     var skipDragEventCounter by remember { mutableIntStateOf(0) }
@@ -254,7 +305,7 @@ private fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) 
         modifier = modifier
             .fillMaxSize()
             .nestedScroll(nestedScrollConnection)
-            .pointerInput(Unit) {
+            .pointerInput(key1 = messages) {
                 coroutineScope {
                     awaitPointerEventScope {
                         while (true) {
@@ -262,16 +313,33 @@ private fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) 
                             when (event.type) {
 
                                 PointerEventType.Press -> {
-                                    Log.d(TAG, "onPress")
                                 }
 
                                 PointerEventType.Release -> {
                                     skipDragEventCounter = 0
-                                    if (listYOffset.value > minListYOffset.toPx()) {
-                                        Log.d(TAG, "onRelease, reset everything")
+
+                                    if (
+                                        listYOffset.value > minListYOffset.toPx()
+                                        || (listYOffset.value <= minListYOffset.toPx() && nextUnreadChat == null)
+                                    ) {
                                         scope.launch { listYOffset.animateTo(0f) }
                                         scope.launch { nextItemLayoutWidth.animateTo(0f) }
                                         scope.launch { nextItemLayoutHeight.animateTo(0f) }
+                                        scope.launch {
+                                            nextItemLayoutPadding.animateTo(
+                                                with(density) { 6.dp.toPx() },
+                                                animationSpec = tween(100),
+                                            )
+                                        }
+                                    } else if (listYOffset.value <= minListYOffset.toPx()) {
+                                        scope.launch {
+                                            listYOffset.snapTo(0f)
+                                            nextItemLayoutWidth.snapTo(0f)
+                                            nextItemLayoutHeight.snapTo(0f)
+                                            nextItemLayoutPadding.snapTo(with(density) { 6.dp.toPx() })
+                                        }
+
+                                        nextUnreadChat?.let { onJumpToNextChat(it) }
                                     }
                                 }
 
@@ -313,7 +381,6 @@ private fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) 
                                                     )
                                                 }
                                             }
-
 
                                             if (dragAmount < 0
                                                 && listYOffset.value == with(density) { minListYOffset.toPx() }
@@ -365,7 +432,7 @@ private fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) 
                                                 }
                                                 scope.launch {
                                                     nextItemLayoutPadding.animateTo(
-                                                        with(density) { 4.dp.toPx() },
+                                                        with(density) { 6.dp.toPx() },
                                                         animationSpec = tween(100),
                                                     )
                                                 }
@@ -384,7 +451,6 @@ private fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) 
             },
     ) {
         val openedEnough = listYOffset.value == with(density) { minListYOffset.toPx() }
-        val isHalfOpened = listYOffset.value < with(density) { (minListYOffset / 3 * 2).toPx() }
         AnimatedContent(targetState = messages, label = "chat_messages") { messages ->
             LazyColumn(
                 modifier = Modifier
@@ -404,8 +470,8 @@ private fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) 
                 itemsIndexed(messages) { index, item ->
                     val paddingValue = when {
                         index == 0 -> 12.dp
-                        item.isReceived && messages[index - 1].isReceived -> 4.dp
-                        !item.isReceived && !messages[index - 1].isReceived -> 4.dp
+                        item.isReceived && messages[index - 1].isReceived -> 2.dp
+                        !item.isReceived && !messages[index - 1].isReceived -> 2.dp
                         else -> 12.dp
                     }
                     Message(item, paddingValue)
@@ -429,32 +495,36 @@ private fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) 
                     .height(with(density) { nextItemLayoutHeight.value.toDp() })
                     .width(with(density) { nextItemLayoutWidth.value.toDp() })
                     .padding(bottom = with(density) { nextItemLayoutBottomMargin.value.toDp() })
-                    .clip(CircleShape)
-                    .background(Color.LightGray)
-                    .padding(with(density) { nextItemLayoutPadding.value.toDp() }),
+                    .background(Color.LightGray, shape = CircleShape)
+                    .padding(horizontal = with(density) { nextItemLayoutPadding.value.toDp() }),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = if (isHalfOpened) Arrangement.SpaceAround else Arrangement.Center,
+                verticalArrangement =
+                if (openedEnoughToShowNextChatIcon()) Arrangement.SpaceAround
+                else Arrangement.Center,
             ) {
                 AnimatedVisibility(!openedEnough) {
                     Icon(
                         painterResource(R.drawable.ic_round_arrow_upward),
                         null,
+                        tint = Color.White,
+                        modifier = Modifier.padding(top = arrowUpMargin/*, bottom = arrowUpMargin/2*/)
                     )
                 }
-                Box(
+                Chat(
                     modifier = Modifier
                         .size(nextItemIconSize)
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(50.dp))
-                        .background(Color.Red),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Default.Home,
-                        null,
-                        modifier = Modifier.padding(4.dp),
-                    )
-                }
+                        .aspectRatio(1f),
+                    chat = nextUnreadChat ?: MainUiState.Chat(
+                        "done",
+                        R.drawable.ic_check,
+                        imageTint = Color.White,
+                        backgroundTint = Color.Transparent,
+                    ),
+                    showTitle = false,
+                    showUnreadBadge = openedEnough,
+                    unreadBadgeColor = Color.LightGray,
+                    unreadBadgeBorderColor = Color.White,
+                )
             }
             AnimatedVisibility(
                 visible = openedEnough,
@@ -469,20 +539,31 @@ private fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) 
                     targetOffsetY = { fullHeight -> fullHeight },
                     animationSpec = tween(durationMillis = 100)
                 ),
-                label = "",
+                label = "next_item_title",
             ) {
-                Text("Item Name", modifier = Modifier.padding(top = 24.dp))
+                Text(
+                    text = nextUnreadChat?.title ?: "You have no unread chat",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .padding(top = 12.dp)
+                        .background(Color.LightGray, shape = CircleShape)
+                        .padding(horizontal = 8.dp),
+                )
             }
         }
     }
 
-    LaunchedEffect(chat) {
-        lazyListState.scrollToItem(chat.firstUnreadIndex)
+    LaunchedEffect(messages) {
+        lazyListState.scrollToItem(firstUnreadMessageIndex ?: 0)
     }
 }
 
 @Composable
-private fun Message(item: MainUiState.Chat.Message, paddingFromPreviousMessage: Dp) {
+private fun Message(
+    item: MainUiState.Chat.Message,
+    paddingFromPreviousMessage: Dp,
+) {
     val clippedShape =
         if (item.isReceived) RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
         else RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
