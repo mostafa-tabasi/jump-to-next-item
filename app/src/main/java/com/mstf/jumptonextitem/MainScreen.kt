@@ -1,6 +1,7 @@
 package com.mstf.jumptonextitem
 
 import android.util.Log
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
@@ -13,12 +14,14 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,11 +30,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -57,12 +63,18 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.ConstraintSet
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -83,6 +95,7 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
                 selectedChat = state.selectedChat,
                 modifier = Modifier
                     .wrapContentWidth()
+                    .fillMaxHeight()
                     .animateContentSize()
                     .background(color = Color.LightGray),
                 onChatSelect = viewModel::onChatSelect,
@@ -106,11 +119,10 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
             }
         }
     }
-
 }
 
 @Composable
-fun ChatList(
+private fun ChatList(
     chats: List<MainUiState.Chat>,
     selectedChat: MainUiState.Chat?,
     modifier: Modifier = Modifier,
@@ -124,18 +136,57 @@ fun ChatList(
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
+                val constraints = ConstraintSet {
+                    val unreadBadge = createRefFor("unread_badge")
+                    constrain(unreadBadge) {
+                        top.linkTo(parent.top, margin = (-4).dp)
+                        end.linkTo(parent.end, margin = (-4).dp)
+                    }
+                }
+                ConstraintLayout(
+                    constraints,
                     modifier = Modifier
                         .size(50.dp)
-                        .clip(RoundedCornerShape(50.dp))
-                        .background(chat.tint),
-                    contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        painter = painterResource(chat.image),
-                        contentDescription = null,
-                        tint = Color.DarkGray,
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(chat.tint),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(chat.image),
+                            contentDescription = null,
+                            tint = Color.DarkGray,
+                        )
+                    }
+                    if (chat.unread) {
+                        Box(
+                            modifier = Modifier
+                                .layoutId("unread_badge")
+                                .sizeIn(minWidth = 20.dp)
+                                .background(Color.Red, shape = CircleShape)
+                                .border(width = 2.dp, color = Color.LightGray, shape = CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            val unreadCount =
+                                (chat.firstUnreadIndex + 1).let {
+                                    when {
+                                        it < 10 -> " $it "
+                                        it in 10..99 -> "$it"
+                                        else -> "+99"
+                                    }
+                                }
+                            Text(
+                                unreadCount,
+                                color = Color.White,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp)
+                            )
+                        }
+                    }
                 }
                 AnimatedVisibility(
                     visible = selectedChat == null,
@@ -159,7 +210,9 @@ fun ChatList(
 }
 
 @Composable
-fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) {
+private fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) {
+    val messages = remember(chat) { chat.messages }
+
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val lazyListState = rememberLazyListState()
@@ -332,29 +385,31 @@ fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) {
     ) {
         val openedEnough = listYOffset.value == with(density) { minListYOffset.toPx() }
         val isHalfOpened = listYOffset.value < with(density) { (minListYOffset / 3 * 2).toPx() }
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .onGloballyPositioned {
-                    listHeight = it.size.height
+        AnimatedContent(targetState = messages, label = "chat_messages") { messages ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onGloballyPositioned {
+                        listHeight = it.size.height
+                    }
+                    .offset {
+                        IntOffset(
+                            x = 0,
+                            y = listYOffset.value.toInt(),
+                        )
+                    },
+                state = lazyListState,
+                reverseLayout = true,
+            ) {
+                itemsIndexed(messages) { index, item ->
+                    val paddingValue = when {
+                        index == 0 -> 12.dp
+                        item.isReceived && messages[index - 1].isReceived -> 4.dp
+                        !item.isReceived && !messages[index - 1].isReceived -> 4.dp
+                        else -> 12.dp
+                    }
+                    Message(item, paddingValue)
                 }
-                .offset {
-                    IntOffset(
-                        x = 0,
-                        y = listYOffset.value.toInt(),
-                    )
-                },
-            state = lazyListState,
-            reverseLayout = true,
-        ) {
-            items(chat.messages) { item ->
-                Text(
-                    item,
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .background(Color.LightGray)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
             }
         }
         Column(
@@ -374,7 +429,7 @@ fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) {
                     .height(with(density) { nextItemLayoutHeight.value.toDp() })
                     .width(with(density) { nextItemLayoutWidth.value.toDp() })
                     .padding(bottom = with(density) { nextItemLayoutBottomMargin.value.toDp() })
-                    .clip(RoundedCornerShape(50.dp))
+                    .clip(CircleShape)
                     .background(Color.LightGray)
                     .padding(with(density) { nextItemLayoutPadding.value.toDp() }),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -422,8 +477,37 @@ fun ChatMessages(chat: MainUiState.Chat, modifier: Modifier = Modifier) {
     }
 
     LaunchedEffect(chat) {
-        scope.launch {
-            lazyListState.animateScrollToItem(chat.firstUnreadIndex)
+        lazyListState.scrollToItem(chat.firstUnreadIndex)
+    }
+}
+
+@Composable
+private fun Message(item: MainUiState.Chat.Message, paddingFromPreviousMessage: Dp) {
+    val clippedShape =
+        if (item.isReceived) RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
+        else RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement =
+        if (item.isReceived) Arrangement.Start
+        else Arrangement.End,
+    ) {
+        if (!item.isReceived) Spacer(modifier = Modifier.width(75.dp))
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = if (item.isReceived) Alignment.CenterStart
+            else Alignment.CenterEnd,
+        ) {
+            Text(
+                item.body,
+                modifier = Modifier
+                    .wrapContentWidth()
+                    .padding(start = 8.dp, end = 8.dp, bottom = paddingFromPreviousMessage)
+                    .clip(clippedShape)
+                    .background(Color.LightGray)
+                    .padding(vertical = 8.dp),
+            )
         }
+        if (item.isReceived) Spacer(modifier = Modifier.width(75.dp))
     }
 }
