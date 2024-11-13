@@ -86,6 +86,7 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
     Surface(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color.Gray)
             .padding(paddingValues),
     ) {
         Row(modifier = Modifier.fillMaxSize()) {
@@ -326,9 +327,13 @@ private fun ChatMessages(
                                         scope.launch { nextItemLayoutWidth.animateTo(0f) }
                                         scope.launch { nextItemLayoutHeight.animateTo(0f) }
                                         scope.launch {
+                                            nextItemLayoutBottomMargin.animateTo(
+                                                with(density) { 8.dp.toPx() }
+                                            )
+                                        }
+                                        scope.launch {
                                             nextItemLayoutPadding.animateTo(
                                                 with(density) { 6.dp.toPx() },
-                                                animationSpec = tween(100),
                                             )
                                         }
                                     } else if (listYOffset.value <= minListYOffset.toPx()) {
@@ -337,6 +342,7 @@ private fun ChatMessages(
                                             nextItemLayoutWidth.snapTo(0f)
                                             nextItemLayoutHeight.snapTo(0f)
                                             nextItemLayoutPadding.snapTo(with(density) { 6.dp.toPx() })
+                                            nextItemLayoutBottomMargin.animateTo(with(density) { 8.dp.toPx() })
                                         }
 
                                         nextUnreadChat?.let { onJumpToNextChat(it) }
