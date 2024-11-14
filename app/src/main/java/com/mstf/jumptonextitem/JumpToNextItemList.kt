@@ -1,7 +1,5 @@
 package com.mstf.jumptonextitem
 
-import android.annotation.SuppressLint
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -53,48 +51,53 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@SuppressLint("UnusedContentLambdaTargetStateParameter")
 @Composable
-fun <T, B> JumpToNextItemList(
+fun <E, T> JumpToNextItemList(
     modifier: Modifier = Modifier,
     lazyListState: LazyListState,
-    itemList: List<T>,
-    nextItem: B?,
-    onJumpToNextItem: (B) -> Unit,
+    itemList: List<E>,
+    nextItem: T?,
+    onJumpToNextItem: (T) -> Unit,
     content: LazyListScope.() -> Unit,
     nextItemContent: @Composable (contentSize: Dp, swipedEnough: Boolean) -> Unit,
     nextItemLabel: String,
 ) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
+    // max height of the next item layout that user needs to swipe for jumping to the next item
     val minListYOffset = remember { (-100).dp }
     val maxNextItemLayoutWidth = remember { 50.dp }
+    // current amount of swiping
     val listYOffset = remember { Animatable(0f) }
     val nextItemLayoutHeight = remember { Animatable(0f) }
     val nextItemLayoutWidth = remember { Animatable(0f) }
-    val nextItemLayoutBottomMargin = remember { Animatable(with(density) { 8.dp.toPx() }) }
-    val nextItemLayoutPadding = remember { Animatable(with(density) { 6.dp.toPx() }) }
+    val nextItemLayoutBottomMargin = remember { Animatable(density.dpToPx(8.dp)) }
+    val nextItemLayoutPadding = remember { Animatable(density.dpToPx(6.dp)) }
 
     var listHeight by remember { mutableIntStateOf(0) }
 
     var isAnimating by remember { mutableStateOf(false) }
 
-    fun swipedEnoughToShowNextChatIcon(): Boolean {
+    fun swipedEnoughToJumpToNextItem(): Boolean {
+        return listYOffset.value == density.dpToPx(minListYOffset)
+    }
+
+    fun swipedEnoughToShowNextItemIcon(): Boolean {
         return if (nextItem != null)
-            listYOffset.value < with(density) { (minListYOffset / 3 * 2).toPx() }
-        else listYOffset.value == with(density) { minListYOffset.toPx() }
+            listYOffset.value < density.dpToPx(minListYOffset / 3 * 2)
+        else swipedEnoughToJumpToNextItem()
     }
 
     val nextItemIconSize by animateDpAsState(
         targetValue =
-        if (swipedEnoughToShowNextChatIcon()) 50.dp
+        if (swipedEnoughToShowNextItemIcon()) 50.dp
         else 0.dp,
         label = "next_item_size"
     )
 
     val arrowUpMargin by animateDpAsState(
         targetValue =
-        if (swipedEnoughToShowNextChatIcon()) 6.dp
+        if (swipedEnoughToShowNextItemIcon()) 6.dp
         else 0.dp,
         label = "arrow_up_margin"
     )
@@ -130,33 +133,23 @@ fun <T, B> JumpToNextItemList(
                                 PointerEventType.Release -> {
                                     skipDragEventCounter = 0
 
-                                    if (
-                                        listYOffset.value > minListYOffset.toPx()
-                                        || (listYOffset.value <= minListYOffset.toPx() && nextItem == null)
-                                    ) {
-                                        scope.launch { listYOffset.animateTo(0f) }
-                                        scope.launch { nextItemLayoutWidth.animateTo(0f) }
-                                        scope.launch { nextItemLayoutHeight.animateTo(0f) }
-                                        scope.launch {
-                                            nextItemLayoutBottomMargin.animateTo(
-                                                with(density) { 8.dp.toPx() }
-                                            )
-                                        }
-                                        scope.launch {
-                                            nextItemLayoutPadding.animateTo(
-                                                with(density) { 6.dp.toPx() },
-                                            )
-                                        }
-                                    } else if (listYOffset.value <= minListYOffset.toPx()) {
-                                        scope.launch {
-                                            listYOffset.snapTo(0f)
-                                            nextItemLayoutWidth.snapTo(0f)
-                                            nextItemLayoutHeight.snapTo(0f)
-                                            nextItemLayoutPadding.snapTo(with(density) { 6.dp.toPx() })
-                                            nextItemLayoutBottomMargin.animateTo(with(density) { 8.dp.toPx() })
-                                        }
+                                    // reset everything to their default values
+                                    listYOffset.tweenAnimateTo(scope, 0f, 200)
+                                    nextItemLayoutWidth
+                                        .tweenAnimateTo(scope, 0f, 200)
+                                    nextItemLayoutHeight
+                                        .tweenAnimateTo(scope, 0f, 200)
+                                    nextItemLayoutBottomMargin
+                                        .tweenAnimateTo(scope, density.dpToPx(8.dp), 200)
+                                    nextItemLayoutPadding
+                                        .tweenAnimateTo(scope, density.dpToPx(6.dp), 200)
 
-                                        nextItem?.let { onJumpToNextItem(it) }
+                                    // user swiped enough for jumping to the next item
+                                    if (swipedEnoughToJumpToNextItem() && nextItem != null) {
+                                        scope.launch {
+                                            delay(100)
+                                            onJumpToNextItem(nextItem)
+                                        }
                                     }
                                 }
 
@@ -171,88 +164,66 @@ fun <T, B> JumpToNextItemList(
                                         // Log.d(TAG, "nextItemLayoutHeight: $listYOffset")
                                         // Log.d(TAG, "=== isAnimating? = $isAnimating")
 
+                                        // ignore dragging event while an animation is running
                                         if (!isAnimating) {
+                                            // start swiping for jumping to the next item, only when
+                                            // user is at the end of the list ( =at the beginning of the list, since list is reversed)
                                             if (!lazyListState.canScrollBackward) {
-                                                scope.launch {
-                                                    listYOffset.snapTo(
-                                                        (listYOffset.value + dragAmount)
-                                                            .coerceIn(minListYOffset.toPx(), 0f)
-                                                    )
-                                                }
-                                                scope.launch {
-                                                    nextItemLayoutHeight.snapTo(
-                                                        (nextItemLayoutHeight.value + -dragAmount)
-                                                            .coerceIn(
-                                                                0f,
-                                                                -minListYOffset.toPx()
-                                                            )
-                                                    )
-                                                }
-                                                scope.launch {
-                                                    nextItemLayoutWidth.snapTo(
-                                                        (nextItemLayoutWidth.value + -dragAmount / 2)
-                                                            .coerceIn(
-                                                                0f,
-                                                                maxNextItemLayoutWidth.toPx(),
-                                                            )
-                                                    )
-                                                }
+                                                listYOffset.snapTo(
+                                                    scope,
+                                                    (listYOffset.value + dragAmount)
+                                                        .coerceIn(minListYOffset.toPx(), 0f)
+                                                )
+                                                nextItemLayoutHeight.snapTo(
+                                                    scope,
+                                                    (nextItemLayoutHeight.value + -dragAmount)
+                                                        .coerceIn(0f, -minListYOffset.toPx())
+                                                )
+                                                nextItemLayoutWidth.snapTo(
+                                                    scope,
+                                                    (nextItemLayoutWidth.value + -dragAmount / 2)
+                                                        .coerceIn(0f, maxNextItemLayoutWidth.toPx())
+                                                )
                                             }
 
-                                            if (dragAmount < 0
-                                                && listYOffset.value == with(density) { minListYOffset.toPx() }
-                                            ) {
+                                            // user swiped enough for jumping to the next item,
+                                            // but still hasn't released the touch event
+                                            // so just pop the next item content and label
+                                            if (dragAmount < 0 && swipedEnoughToJumpToNextItem()) {
                                                 isAnimating = true
-                                                scope.launch {
-                                                    nextItemLayoutHeight.animateTo(
-                                                        with(density) { maxNextItemLayoutWidth.toPx() },
-                                                        animationSpec = spring(
-                                                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                            stiffness = Spring.StiffnessMedium
-                                                        ),
-                                                    )
-                                                }
-                                                scope.launch {
-                                                    nextItemLayoutBottomMargin.animateTo(
-                                                        0f,
-                                                        animationSpec = tween(200),
-                                                    )
-                                                }
-                                                scope.launch {
-                                                    nextItemLayoutPadding.animateTo(
-                                                        0f,
-                                                        animationSpec = tween(200),
-                                                    )
-                                                }
+
+                                                nextItemLayoutHeight.springAnimateTo(
+                                                    scope,
+                                                    density.dpToPx(maxNextItemLayoutWidth),
+                                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                    stiffness = Spring.StiffnessMedium,
+                                                )
+                                                nextItemLayoutBottomMargin
+                                                    .tweenAnimateTo(scope, 0f, 200)
+                                                nextItemLayoutPadding
+                                                    .tweenAnimateTo(scope, 0f, 200)
+
                                                 scope.launch {
                                                     delay(200)
                                                     isAnimating = false
                                                 }
                                             }
 
-
-                                            if (dragAmount > 0
-                                                && listYOffset.value <= with(density) { (minListYOffset + 1.dp).toPx() }
+                                            // user came back from fully swiped to partially swiped state
+                                            // so just dismiss the next item content and label
+                                            if (dragAmount > 0 &&
+                                                listYOffset.value <= density.dpToPx(minListYOffset + 1.dp)
                                             ) {
                                                 isAnimating = true
-                                                scope.launch {
-                                                    nextItemLayoutHeight.animateTo(
-                                                        -listYOffset.value,
-                                                        animationSpec = tween(100),
-                                                    )
-                                                }
-                                                scope.launch {
-                                                    nextItemLayoutBottomMargin.animateTo(
-                                                        with(density) { 8.dp.toPx() },
-                                                        animationSpec = tween(100),
-                                                    )
-                                                }
-                                                scope.launch {
-                                                    nextItemLayoutPadding.animateTo(
-                                                        with(density) { 6.dp.toPx() },
-                                                        animationSpec = tween(100),
-                                                    )
-                                                }
+                                                nextItemLayoutHeight
+                                                    .tweenAnimateTo(scope, -listYOffset.value, 100)
+                                                nextItemLayoutHeight
+                                                    .tweenAnimateTo(scope, -listYOffset.value, 100)
+                                                nextItemLayoutBottomMargin
+                                                    .tweenAnimateTo(scope, density.dpToPx(8.dp), 100)
+                                                nextItemLayoutPadding
+                                                    .tweenAnimateTo(scope, density.dpToPx(6.dp), 100)
+
                                                 scope.launch {
                                                     delay(100)
                                                     isAnimating = false
@@ -267,25 +238,22 @@ fun <T, B> JumpToNextItemList(
                 }
             },
     ) {
-        val swipedEnough = listYOffset.value == with(density) { minListYOffset.toPx() }
-        AnimatedContent(targetState = itemList, label = "chat_messages") { _ ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .onGloballyPositioned {
-                        listHeight = it.size.height
-                    }
-                    .offset {
-                        IntOffset(
-                            x = 0,
-                            y = listYOffset.value.toInt(),
-                        )
-                    },
-                state = lazyListState,
-                reverseLayout = true,
-                content = content,
-            )
-        }
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .onGloballyPositioned {
+                    listHeight = it.size.height
+                }
+                .offset {
+                    IntOffset(
+                        x = 0,
+                        y = listYOffset.value.toInt()
+                    )
+                },
+            state = lazyListState,
+            reverseLayout = true,
+            content = content,
+        )
         Column(
             Modifier
                 .fillMaxWidth()
@@ -300,17 +268,17 @@ fun <T, B> JumpToNextItemList(
         ) {
             Column(
                 Modifier
-                    .height(with(density) { nextItemLayoutHeight.value.toDp() })
-                    .width(with(density) { nextItemLayoutWidth.value.toDp() })
-                    .padding(bottom = with(density) { nextItemLayoutBottomMargin.value.toDp() })
+                    .height(density.pxToDp(nextItemLayoutHeight.value))
+                    .width(density.pxToDp(nextItemLayoutWidth.value))
+                    .padding(bottom = density.pxToDp(nextItemLayoutBottomMargin.value))
                     .background(Color.LightGray, shape = CircleShape)
-                    .padding(horizontal = with(density) { nextItemLayoutPadding.value.toDp() }),
+                    .padding(horizontal = density.pxToDp(nextItemLayoutPadding.value)),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement =
-                if (swipedEnoughToShowNextChatIcon()) Arrangement.SpaceAround
+                if (swipedEnoughToShowNextItemIcon()) Arrangement.SpaceAround
                 else Arrangement.Center,
             ) {
-                AnimatedVisibility(!swipedEnough) {
+                AnimatedVisibility(!swipedEnoughToJumpToNextItem()) {
                     Icon(
                         painterResource(R.drawable.ic_round_arrow_upward),
                         null,
@@ -318,10 +286,10 @@ fun <T, B> JumpToNextItemList(
                         modifier = Modifier.padding(top = arrowUpMargin)
                     )
                 }
-                nextItemContent(nextItemIconSize, swipedEnough)
+                nextItemContent(nextItemIconSize, swipedEnoughToJumpToNextItem())
             }
             AnimatedVisibility(
-                visible = swipedEnough,
+                visible = swipedEnoughToJumpToNextItem(),
                 enter = slideInVertically(
                     initialOffsetY = { fullHeight -> fullHeight },
                     animationSpec = spring(

@@ -83,8 +83,7 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
             ) {
                 state.selectedChat?.let { chat ->
                     ChatMessages(
-                        messages = chat.messages,
-                        firstUnreadMessageIndex = chat.firstUnreadIndex,
+                        chat = chat,
                         nextUnreadChat = state.chats.firstOrNull { it.unread && it != chat },
                         onJumpToNextChat = viewModel::onChatSelect,
                     )
@@ -235,12 +234,12 @@ private fun UnreadBadge(
 @Composable
 private fun ChatMessages(
     modifier: Modifier = Modifier,
-    messages: List<MainUiState.Chat.Message>,
-    firstUnreadMessageIndex: Int?,
+    chat: MainUiState.Chat,
     nextUnreadChat: MainUiState.Chat?,
     onJumpToNextChat: (MainUiState.Chat) -> Unit,
 ) {
     val lazyListState = rememberLazyListState()
+    val messages = chat.messages
 
     JumpToNextItemList(
         modifier = modifier
@@ -284,7 +283,7 @@ private fun ChatMessages(
     )
 
     LaunchedEffect(messages) {
-        lazyListState.scrollToItem(firstUnreadMessageIndex ?: 0)
+        lazyListState.scrollToItem(chat.firstUnreadIndex ?: 0)
     }
 }
 
