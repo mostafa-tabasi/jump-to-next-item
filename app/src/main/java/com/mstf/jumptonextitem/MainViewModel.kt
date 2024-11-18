@@ -43,7 +43,7 @@ class MainViewModel : ViewModel() {
         tint: Color,
         imageTint: Color = Unspecified,
     ): MainUiState.Chat {
-        val messagesCount = (5..30).random()
+        val messagesCount = (5..10).random()
         val unread = Random.nextBoolean()
 
         return MainUiState.Chat(

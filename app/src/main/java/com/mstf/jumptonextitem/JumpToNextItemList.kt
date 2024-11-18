@@ -1,13 +1,17 @@
 package com.mstf.jumptonextitem
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,8 +23,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -33,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -58,7 +63,7 @@ fun <E, T> JumpToNextItemList(
     itemList: List<E>,
     nextItem: T?,
     onJumpToNextItem: (T) -> Unit,
-    content: LazyListScope.() -> Unit,
+    listItemContent: @Composable (index: Int, item: E) -> Unit,
     nextItemContent: @Composable (contentSize: Dp, swipedEnough: Boolean) -> Unit,
     nextItemLabel: String,
 ) {
@@ -119,8 +124,9 @@ fun <E, T> JumpToNextItemList(
     }
     Box(
         modifier = modifier
+            .clipToBounds()
             .nestedScroll(nestedScrollConnection)
-            .pointerInput(key1 = itemList) {
+            .pointerInput(key1 = itemList, key2 = nextItem) {
                 coroutineScope {
                     awaitPointerEventScope {
                         while (true) {
@@ -220,9 +226,17 @@ fun <E, T> JumpToNextItemList(
                                                 nextItemLayoutHeight
                                                     .tweenAnimateTo(scope, -listYOffset.value, 100)
                                                 nextItemLayoutBottomMargin
-                                                    .tweenAnimateTo(scope, density.dpToPx(8.dp), 100)
+                                                    .tweenAnimateTo(
+                                                        scope,
+                                                        density.dpToPx(8.dp),
+                                                        100
+                                                    )
                                                 nextItemLayoutPadding
-                                                    .tweenAnimateTo(scope, density.dpToPx(6.dp), 100)
+                                                    .tweenAnimateTo(
+                                                        scope,
+                                                        density.dpToPx(6.dp),
+                                                        100
+                                                    )
 
                                                 scope.launch {
                                                     delay(100)
@@ -238,22 +252,32 @@ fun <E, T> JumpToNextItemList(
                 }
             },
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .onGloballyPositioned {
-                    listHeight = it.size.height
-                }
-                .offset {
-                    IntOffset(
-                        x = 0,
-                        y = listYOffset.value.toInt()
-                    )
-                },
-            state = lazyListState,
-            reverseLayout = true,
-            content = content,
-        )
+        AnimatedContent(
+            targetState = itemList,
+            transitionSpec = {
+                slideInVertically { height -> -height / 2 } + fadeIn(tween(500)) togetherWith
+                        slideOutVertically { height -> height } + fadeOut(tween(100))
+            },
+            label = "items_list",
+        ) { items ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onGloballyPositioned {
+                        listHeight = it.size.height
+                    }
+                    .offset {
+                        IntOffset(
+                            x = 0,
+                            y = listYOffset.value.toInt()
+                        )
+                    },
+                state = lazyListState,
+                reverseLayout = true,
+            ) {
+                itemsIndexed(items = items) { index, item -> listItemContent(index, item) }
+            }
+        }
         Column(
             Modifier
                 .fillMaxWidth()

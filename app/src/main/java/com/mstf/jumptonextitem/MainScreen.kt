@@ -3,6 +3,7 @@ package com.mstf.jumptonextitem
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -28,7 +29,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -122,6 +123,7 @@ private fun ChatList(
                 chat = chat,
                 showTitle = selectedChat == null,
                 showUnreadBadge = true,
+                isChatSelected = isChatSelected,
             )
         }
     }
@@ -135,9 +137,15 @@ private fun Chat(
     showUnreadBadge: Boolean = true,
     unreadBadgeColor: Color = Color.Red,
     unreadBadgeBorderColor: Color = Color.LightGray,
+    isChatSelected: Boolean = false,
 ) {
+    val imageMargin by animateDpAsState(
+        targetValue = if (isChatSelected) 0.dp else 6.dp,
+        label = "next_item_size"
+    )
+
     Row(
-        modifier = modifier,
+        modifier = modifier.sizeIn(50.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
@@ -155,8 +163,8 @@ private fun Chat(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(CircleShape)
-                    .background(chat.backgroundTint),
+                    .padding(imageMargin)
+                    .background(chat.backgroundTint, shape = CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -167,8 +175,7 @@ private fun Chat(
             }
             AnimatedVisibility(
                 visible = chat.unread && showUnreadBadge,
-                modifier = Modifier
-                    .layoutId("unread_badge"),
+                modifier = Modifier.layoutId("unread_badge"),
                 enter = scaleIn(animationSpec = spring()),
                 exit = scaleOut(animationSpec = spring()),
                 label = "unread_badge"
@@ -191,9 +198,10 @@ private fun Chat(
         ) {
             Text(
                 chat.title,
+                fontSize = 15.sp,
                 modifier = Modifier
-                    .width(100.dp)
-                    .padding(start = 8.dp),
+                    .width(120.dp)
+                    .padding(start = 12.dp),
             )
         }
     }
@@ -239,7 +247,7 @@ private fun ChatMessages(
     onJumpToNextChat: (MainUiState.Chat) -> Unit,
 ) {
     val lazyListState = rememberLazyListState()
-    val messages = chat.messages
+    val messages = remember(chat) { chat.messages }
 
     JumpToNextItemList(
         modifier = modifier
@@ -248,19 +256,19 @@ private fun ChatMessages(
         itemList = messages,
         nextItem = nextUnreadChat,
         onJumpToNextItem = onJumpToNextChat,
-        content = {
-            itemsIndexed(messages) { index, item ->
-                // Need to handle read messages and modify onChatSelect func in viewModel
-                // if (index == firstUnreadMessageIndex) UnreadMessagesDivider()
+        listItemContent = { index, item ->
+            if (index >= messages.size) return@JumpToNextItemList
 
-                val paddingValue = when {
-                    index == 0 -> 8.dp
-                    item.isReceived && messages[index - 1].isReceived -> 2.dp
-                    !item.isReceived && !messages[index - 1].isReceived -> 2.dp
-                    else -> 12.dp
-                }
-                Message(item, paddingValue)
+            // Need to handle read messages and modify onChatSelect func in viewModel
+            // if (index == firstUnreadMessageIndex) UnreadMessagesDivider()
+
+            val paddingValue = when {
+                index == 0 -> 8.dp
+                item.isReceived && messages[index - 1].isReceived -> 2.dp
+                !item.isReceived && !messages[index - 1].isReceived -> 2.dp
+                else -> 12.dp
             }
+            Message(item, paddingValue)
         },
         nextItemContent = { contentSize, swipedEnough ->
             Chat(
@@ -277,6 +285,7 @@ private fun ChatMessages(
                 showUnreadBadge = swipedEnough,
                 unreadBadgeColor = Color.LightGray,
                 unreadBadgeBorderColor = Color.White,
+                isChatSelected = true,
             )
         },
         nextItemLabel = nextUnreadChat?.title ?: "You have no unread chat",
