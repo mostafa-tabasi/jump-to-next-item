@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,7 +33,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -58,7 +59,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsState()
-    Surface(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Gray)
@@ -83,6 +84,7 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
             Box(
                 Modifier
                     .weight(1f)
+                    .background(Color.White)
                     .fillMaxHeight(),
                 contentAlignment = Alignment.Center
             ) {
@@ -101,6 +103,29 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
+            }
+        }
+        AnimatedVisibility(
+            visible = state.selectedChat != null,
+            enter = slideInVertically { fullHeight -> -fullHeight },
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.Gray)
+                    .padding(bottom = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Chat(
+                    chat = state.selectedChat!!,
+                    showTitle = true,
+                    titleStyle = TextStyle(
+                        color = Color.White,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                    showUnreadBadge = false,
+                )
             }
         }
     }
@@ -138,6 +163,11 @@ private fun Chat(
     modifier: Modifier = Modifier,
     chat: MainUiState.Chat,
     showTitle: Boolean,
+    titleStyle: TextStyle = TextStyle(
+        color = Color.Black,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.Normal,
+    ),
     showUnreadBadge: Boolean = true,
     unreadBadgeColor: Color = Color.Red,
     unreadBadgeBorderColor: Color = Color.LightGray,
@@ -194,7 +224,7 @@ private fun Chat(
         if (showTitle) {
             Text(
                 chat.title,
-                fontSize = 15.sp,
+                style = titleStyle,
                 modifier = Modifier
                     .width(120.dp)
                     .padding(start = 12.dp),

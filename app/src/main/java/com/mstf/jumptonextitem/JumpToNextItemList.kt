@@ -2,6 +2,7 @@ package com.mstf.jumptonextitem
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -107,6 +108,13 @@ fun <E, T> JumpToNextItemList(
         label = "arrow_up_margin"
     )
 
+    val swipeBackgroundColor by animateColorAsState(
+        targetValue =
+        if (swipedEnoughToJumpToNextItem() && nextItem != null) Color.White
+        else Color.LightGray,
+        label = "swipe_background_color"
+    )
+
     var skipDragEventCounter by remember { mutableIntStateOf(0) }
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
@@ -202,7 +210,7 @@ fun <E, T> JumpToNextItemList(
                                                     scope,
                                                     density.dpToPx(maxNextItemLayoutWidth),
                                                     dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                    stiffness = Spring.StiffnessMedium,
+                                                    stiffness = Spring.StiffnessMediumLow,
                                                 )
                                                 nextItemLayoutBottomMargin
                                                     .tweenAnimateTo(scope, 0f, 200)
@@ -295,7 +303,7 @@ fun <E, T> JumpToNextItemList(
                     .height(density.pxToDp(nextItemLayoutHeight.value))
                     .width(density.pxToDp(nextItemLayoutWidth.value))
                     .padding(bottom = density.pxToDp(nextItemLayoutBottomMargin.value))
-                    .background(Color.LightGray, shape = CircleShape)
+                    .background(swipeBackgroundColor, shape = CircleShape)
                     .padding(horizontal = density.pxToDp(nextItemLayoutPadding.value)),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement =
