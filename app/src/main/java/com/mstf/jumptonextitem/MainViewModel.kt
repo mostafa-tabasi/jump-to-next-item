@@ -2,16 +2,8 @@ package com.mstf.jumptonextitem
 
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Color.Companion.Black
-import androidx.compose.ui.graphics.Color.Companion.Blue
-import androidx.compose.ui.graphics.Color.Companion.Cyan
-import androidx.compose.ui.graphics.Color.Companion.DarkGray
-import androidx.compose.ui.graphics.Color.Companion.Gray
-import androidx.compose.ui.graphics.Color.Companion.Green
-import androidx.compose.ui.graphics.Color.Companion.Magenta
 import androidx.compose.ui.graphics.Color.Companion.Unspecified
 import androidx.compose.ui.graphics.Color.Companion.White
-import androidx.compose.ui.graphics.Color.Companion.Yellow
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,22 +18,22 @@ class MainViewModel : ViewModel() {
     init {
         _uiState.value = uiState.value.copy(
             chats = listOf(
-                makeChat("Mr. White", White),
-                makeChat("Mr. Black", Black, imageTint = DarkGray),
-                makeChat("Mr. Blue", Blue),
-                makeChat("Mr. Magenta", Magenta),
-                makeChat("Mr. Gray", Gray),
-                makeChat("Mr. Yellow", Yellow),
-                makeChat("Mr. Cyan", Cyan),
-                makeChat("Mr. Green", Green),
+                makeChat("Mr. Gray", "#455A64"),
+                makeChat("Mr. Brown", "#795548"),
+                makeChat("Mr. Orange", "#FB8C00"),
+                makeChat("Mr. Green", "#558B2F"),
+                makeChat("Mr. Teal", "#26A69A"),
+                makeChat("Mr. Blue", "#1565C0"),
+                makeChat("Mr. Purple", "#6A1B9A"),
+                makeChat("Mr. Red", "#F44336"),
             ),
         )
     }
 
     private fun makeChat(
         title: String,
-        tint: Color,
-        imageTint: Color = Unspecified,
+        tintHex: String,
+        imageTint: Color = White,
     ): MainUiState.Chat {
         val messagesCount = (5..10).random()
         val unread = Random.nextBoolean()
@@ -50,7 +42,7 @@ class MainViewModel : ViewModel() {
             title = title,
             image = R.drawable.ic_account,
             imageTint = imageTint,
-            backgroundTint = tint,
+            backgroundTintHex = tintHex,
             messages = (3..messagesCount).map {
                 var text = ""
                 repeat((15..100).random()) {
@@ -89,7 +81,7 @@ data class MainUiState(
         val title: String,
         @DrawableRes val image: Int,
         val imageTint: Color = Unspecified,
-        val backgroundTint: Color,
+        val backgroundTintHex: String,
         val messages: List<Message> = arrayListOf(),
         val unread: Boolean = false,
         val firstUnreadIndex: Int? = null,

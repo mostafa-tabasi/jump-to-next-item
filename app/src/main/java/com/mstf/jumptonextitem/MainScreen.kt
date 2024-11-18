@@ -140,7 +140,7 @@ private fun ChatList(
 ) {
     LazyColumn(
         modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
+        horizontalAlignment = Alignment.Start,
     ) {
         items(chats) { chat ->
             val isChatSelected = chat == selectedChat
@@ -169,7 +169,7 @@ private fun Chat(
         fontWeight = FontWeight.Normal,
     ),
     showUnreadBadge: Boolean = true,
-    unreadBadgeColor: Color = Color.Red,
+    unreadBadgeColor: Color = Color(android.graphics.Color.parseColor("#B71C1C")),
     unreadBadgeBorderColor: Color = Color.LightGray,
     isChatSelected: Boolean = false,
 ) {
@@ -194,11 +194,12 @@ private fun Chat(
             constraints,
             modifier = Modifier.size(50.dp)
         ) {
+            val chatColor = Color(android.graphics.Color.parseColor(chat.backgroundTintHex))
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(imageMargin)
-                    .background(chat.backgroundTint, shape = CircleShape),
+                    .background(chatColor, shape = CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -226,7 +227,7 @@ private fun Chat(
                 chat.title,
                 style = titleStyle,
                 modifier = Modifier
-                    .width(120.dp)
+                    .wrapContentWidth()
                     .padding(start = 12.dp),
             )
         }
@@ -305,7 +306,7 @@ private fun ChatMessages(
                     "done",
                     R.drawable.ic_check,
                     imageTint = Color.White,
-                    backgroundTint = Color.Transparent,
+                    backgroundTintHex = "#00FFFFFF",
                 ),
                 showTitle = false,
                 showUnreadBadge = swipedEnough,
