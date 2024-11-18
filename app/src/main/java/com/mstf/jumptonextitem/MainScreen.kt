@@ -2,7 +2,6 @@ package com.mstf.jumptonextitem
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeOut
@@ -66,16 +65,21 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
             .padding(paddingValues),
     ) {
         Row(modifier = Modifier.fillMaxSize()) {
-            ChatList(
-                modifier = Modifier
-                    .wrapContentWidth()
-                    .fillMaxHeight()
-                    .animateContentSize()
-                    .background(color = Color.LightGray),
-                chats = state.chats,
-                selectedChat = state.selectedChat,
-                onChatSelect = viewModel::onChatSelect,
-            )
+            AnimatedVisibility(
+                visible = state.selectedChat == null,
+                exit = fadeOut() + shrinkHorizontally(animationSpec = spring()),
+            ) {
+                ChatList(
+                    modifier = Modifier
+                        .wrapContentWidth()
+                        .fillMaxHeight()
+                        .animateContentSize()
+                        .background(color = Color.LightGray),
+                    chats = state.chats,
+                    selectedChat = state.selectedChat,
+                    onChatSelect = viewModel::onChatSelect,
+                )
+            }
             Box(
                 Modifier
                     .weight(1f)
@@ -187,15 +191,7 @@ private fun Chat(
                 )
             }
         }
-        AnimatedVisibility(
-            visible = showTitle,
-            exit = fadeOut() + shrinkHorizontally(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessHigh,
-                )
-            ),
-        ) {
+        if (showTitle) {
             Text(
                 chat.title,
                 fontSize = 15.sp,
