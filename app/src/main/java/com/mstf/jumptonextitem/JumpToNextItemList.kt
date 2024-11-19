@@ -161,7 +161,7 @@ fun <E, T> JumpToNextItemList(
                                     // user swiped enough for jumping to the next item
                                     if (swipedEnoughToJumpToNextItem() && nextItem != null) {
                                         scope.launch {
-                                            delay(100)
+                                            delay(75)
                                             onJumpToNextItem(nextItem)
                                         }
                                     }
@@ -338,11 +338,11 @@ fun <E, T> JumpToNextItemList(
                 Text(
                     text = nextItemLabel,
                     color = Color.White,
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
                     modifier = Modifier
                         .padding(top = 12.dp)
                         .background(Color.LightGray, shape = CircleShape)
-                        .padding(horizontal = 8.dp),
+                        .padding(horizontal = 10.dp),
                 )
             }
         }

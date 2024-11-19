@@ -54,7 +54,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -284,7 +283,7 @@ private fun UnreadBadge(
         Text(
             unreadCount,
             color = Color.White,
-            fontSize = 9.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 6.dp)
         )
@@ -314,13 +313,13 @@ private fun ChatMessages(
             // Need to handle read messages and modify onChatSelect func in viewModel
             // if (index == firstUnreadMessageIndex) UnreadMessagesDivider()
 
-            val paddingValue = when {
-                index == 0 -> 8.dp
-                item.isReceived && messages[index - 1].isReceived -> 2.dp
-                !item.isReceived && !messages[index - 1].isReceived -> 2.dp
-                else -> 12.dp
+            val previousMessageHasSameSender = when {
+                index == 0 -> false
+                item.isReceived && messages[index - 1].isReceived -> true
+                !item.isReceived && !messages[index - 1].isReceived -> true
+                else -> false
             }
-            Message(item, paddingValue)
+            Message(item, index, previousMessageHasSameSender)
         },
         nextItemContent = { contentSize, swipedEnough ->
             Chat(
@@ -380,11 +379,27 @@ private fun UnreadMessagesDivider() {
 @Composable
 private fun Message(
     item: MainUiState.Chat.Message,
-    paddingFromPreviousMessage: Dp,
+    position: Int,
+    previousMessageHasSameSender: Boolean,
 ) {
+    val paddingFromPreviousMessage = when {
+        position == 0 -> 8.dp
+        item.isReceived && previousMessageHasSameSender -> 2.dp
+        !item.isReceived && previousMessageHasSameSender -> 2.dp
+        else -> 12.dp
+    }
+
     val clippedShape =
-        if (item.isReceived) RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
-        else RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+        if (item.isReceived)
+            RoundedCornerShape(
+                topEnd = 16.dp,
+                bottomEnd = 16.dp,
+            )
+        else RoundedCornerShape(
+            topStart = 16.dp,
+            bottomStart = 16.dp,
+        )
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement =
