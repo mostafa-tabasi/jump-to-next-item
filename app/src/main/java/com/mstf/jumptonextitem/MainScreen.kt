@@ -1,14 +1,20 @@
 package com.mstf.jumptonextitem
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -65,7 +71,11 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
             .background(Color.Gray)
             .padding(paddingValues),
     ) {
-        Row(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White),
+        ) {
             AnimatedVisibility(
                 visible = state.selectedChat == null,
                 exit = fadeOut() + shrinkHorizontally(animationSpec = spring()),
@@ -113,7 +123,7 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color.Gray)
-                    .padding(bottom = 8.dp),
+                    .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Chat(
@@ -173,6 +183,13 @@ private fun Chat(
     unreadBadgeBorderColor: Color = Color.LightGray,
     isChatSelected: Boolean = false,
 ) {
+    val chatColor = Color(android.graphics.Color.parseColor(chat.backgroundTintHex))
+    val animatedImageColor by animateColorAsState(
+        targetValue = chatColor,
+        animationSpec = spring(),
+        label = "image_color",
+    )
+
     val imageMargin by animateDpAsState(
         targetValue = if (isChatSelected) 0.dp else 6.dp,
         label = "next_item_size"
@@ -194,12 +211,11 @@ private fun Chat(
             constraints,
             modifier = Modifier.size(50.dp)
         ) {
-            val chatColor = Color(android.graphics.Color.parseColor(chat.backgroundTintHex))
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(imageMargin)
-                    .background(chatColor, shape = CircleShape),
+                    .background(animatedImageColor, shape = CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -223,13 +239,22 @@ private fun Chat(
             }
         }
         if (showTitle) {
-            Text(
-                chat.title,
-                style = titleStyle,
-                modifier = Modifier
-                    .wrapContentWidth()
-                    .padding(start = 12.dp),
-            )
+            AnimatedContent(
+                targetState = chat.title,
+                transitionSpec = {
+                    slideInVertically { height -> -height } + fadeIn(tween(500)) togetherWith
+                            slideOutVertically { height -> height } + fadeOut(tween(100))
+                },
+                label = "chat_title"
+            ) { title ->
+                Text(
+                    title,
+                    style = titleStyle,
+                    modifier = Modifier
+                        .wrapContentWidth()
+                        .padding(start = 12.dp),
+                )
+            }
         }
     }
 }
