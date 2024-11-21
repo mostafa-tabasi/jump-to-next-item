@@ -149,14 +149,24 @@ fun <E, T> JumpToNextItemList(
 
                                     // reset everything to their default values
                                     listYOffset.tweenAnimateTo(scope, 0f, 200)
-                                    nextItemLayoutWidth
-                                        .tweenAnimateTo(scope, 0f, 200)
-                                    nextItemLayoutHeight
-                                        .tweenAnimateTo(scope, 0f, 200)
-                                    nextItemLayoutBottomMargin
-                                        .tweenAnimateTo(scope, density.dpToPx(8.dp), 200)
-                                    nextItemLayoutPadding
-                                        .tweenAnimateTo(scope, density.dpToPx(6.dp), 200)
+                                    // if user swiped enough to jump to next item,
+                                    // we snap the values to default after the animation of sliding down is done
+                                    if (swipedEnoughToJumpToNextItem()) {
+                                        scope.launch {
+                                            delay(250)
+                                            nextItemLayoutWidth.snapTo(scope, 0f)
+                                            nextItemLayoutHeight.snapTo(scope, 0f)
+                                            nextItemLayoutBottomMargin.snapTo(scope, density.dpToPx(8.dp))
+                                            nextItemLayoutPadding.snapTo(scope, density.dpToPx(6.dp))
+                                        }
+                                    }
+                                    // otherwise we animate all the values to default
+                                    else {
+                                        nextItemLayoutWidth.tweenAnimateTo(scope, 0f, 200)
+                                        nextItemLayoutHeight.tweenAnimateTo(scope, 0f, 200)
+                                        nextItemLayoutBottomMargin.tweenAnimateTo(scope, density.dpToPx(8.dp), 200)
+                                        nextItemLayoutPadding.tweenAnimateTo(scope, density.dpToPx(6.dp), 200)
+                                    }
 
                                     // user swiped enough for jumping to the next item
                                     if (swipedEnoughToJumpToNextItem() && nextItem != null) {
