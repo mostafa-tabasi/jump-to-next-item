@@ -64,11 +64,25 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsState()
+
+    val selectedChatBackgroundColor =
+        if (state.selectedChat != null) Color(android.graphics.Color.parseColor(state.selectedChat!!.backgroundTintHex))
+        else Color.Transparent
+
+    val animatedImageColor by animateColorAsState(
+        targetValue = selectedChatBackgroundColor,
+        animationSpec = spring(),
+        label = "background_color",
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Gray)
-            .padding(paddingValues),
+            .padding(
+                bottom = paddingValues.calculateBottomPadding(),
+                top = if (state.selectedChat == null) paddingValues.calculateTopPadding() else 0.dp
+            ),
     ) {
         Row(
             modifier = Modifier
@@ -121,12 +135,12 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.Gray)
-                    .padding(vertical = 8.dp),
+                    .background(animatedImageColor)
+                    .padding(bottom = 8.dp, top = paddingValues.calculateTopPadding() + 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Chat(
-                    chat = state.selectedChat!!,
+                    chat = state.selectedChat!!.copy(backgroundTintHex = "#00000000"),
                     showTitle = true,
                     titleStyle = TextStyle(
                         color = Color.White,
@@ -182,13 +196,6 @@ private fun Chat(
     unreadBadgeBorderColor: Color = Color.LightGray,
     isChatSelected: Boolean = false,
 ) {
-    val chatColor = Color(android.graphics.Color.parseColor(chat.backgroundTintHex))
-    val animatedImageColor by animateColorAsState(
-        targetValue = chatColor,
-        animationSpec = spring(),
-        label = "image_color",
-    )
-
     val imageMargin by animateDpAsState(
         targetValue = if (isChatSelected) 0.dp else 6.dp,
         label = "next_item_size"
@@ -210,11 +217,12 @@ private fun Chat(
             constraints,
             modifier = Modifier.size(50.dp)
         ) {
+            val chatColor = Color(android.graphics.Color.parseColor(chat.backgroundTintHex))
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(imageMargin)
-                    .background(animatedImageColor, shape = CircleShape),
+                    .background(chatColor, shape = CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -336,7 +344,7 @@ private fun ChatMessages(
                     "done",
                     R.drawable.ic_check,
                     imageTint = Color.White,
-                    backgroundTintHex = "#00FFFFFF",
+                    backgroundTintHex = "#00000000",
                 ),
                 showTitle = false,
                 showUnreadBadge = swipedEnough,
