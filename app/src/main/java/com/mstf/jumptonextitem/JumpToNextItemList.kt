@@ -273,8 +273,10 @@ fun <E, T> JumpToNextItemList(
         AnimatedContent(
             targetState = itemList,
             transitionSpec = {
-                slideInVertically { height -> -height / 2 } + fadeIn(tween(500)) togetherWith
-                        slideOutVertically { height -> height } + fadeOut(tween(100))
+                slideInVertically(tween(250, 75)) { height -> -height / 2 } +
+                        fadeIn(tween(250, 75)) togetherWith
+                        slideOutVertically(tween(100)) { height -> height } +
+                        fadeOut(tween(100))
             },
             label = "items_list",
         ) { items ->
