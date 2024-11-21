@@ -221,6 +221,7 @@ private fun Chat(
                     painter = painterResource(chat.image),
                     contentDescription = null,
                     tint = chat.imageTint,
+                    modifier = Modifier.padding(2.dp)
                 )
             }
             AnimatedVisibility(
@@ -310,16 +311,21 @@ private fun ChatMessages(
         listItemContent = { index, item ->
             if (index >= messages.size) return@JumpToNextItemList
 
-            // Need to handle read messages and modify onChatSelect func in viewModel
-            // if (index == firstUnreadMessageIndex) UnreadMessagesDivider()
-
             val previousMessageHasSameSender = when {
                 index == 0 -> false
                 item.isReceived && messages[index - 1].isReceived -> true
                 !item.isReceived && !messages[index - 1].isReceived -> true
                 else -> false
             }
-            Message(item, index, previousMessageHasSameSender)
+            val nextMessageHasSameSender = when {
+                index == messages.indices.last -> false
+                item.isReceived && messages[index + 1].isReceived -> true
+                !item.isReceived && !messages[index + 1].isReceived -> true
+                else -> false
+            }
+            Message(item, index, previousMessageHasSameSender, nextMessageHasSameSender)
+
+            if (index == chat.firstUnreadIndex) UnreadMessagesDivider()
         },
         nextItemContent = { contentSize, swipedEnough ->
             Chat(
@@ -342,7 +348,7 @@ private fun ChatMessages(
         nextItemLabel = nextUnreadChat?.title ?: "You have no unread chat",
     )
 
-    LaunchedEffect(messages) {
+    LaunchedEffect(chat) {
         lazyListState.scrollToItem(chat.firstUnreadIndex ?: 0)
     }
 }
@@ -381,6 +387,7 @@ private fun Message(
     item: MainUiState.Chat.Message,
     position: Int,
     previousMessageHasSameSender: Boolean,
+    nextMessageHasSameSender: Boolean,
 ) {
     val paddingFromPreviousMessage = when {
         position == 0 -> 8.dp
@@ -392,12 +399,16 @@ private fun Message(
     val clippedShape =
         if (item.isReceived)
             RoundedCornerShape(
+                topStart = if (nextMessageHasSameSender) 0.dp else 16.dp,
+                bottomStart = if (previousMessageHasSameSender) 0.dp else 16.dp,
                 topEnd = 16.dp,
                 bottomEnd = 16.dp,
             )
         else RoundedCornerShape(
             topStart = 16.dp,
             bottomStart = 16.dp,
+            topEnd = if (nextMessageHasSameSender) 0.dp else 16.dp,
+            bottomEnd = if (previousMessageHasSameSender) 0.dp else 16.dp,
         )
 
     Row(

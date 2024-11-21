@@ -90,7 +90,7 @@ fun <E, T> JumpToNextItemList(
 
     fun swipedEnoughToShowNextItemIcon(): Boolean {
         return if (nextItem != null)
-            listYOffset.value < density.dpToPx(minListYOffset / 3 * 2)
+            listYOffset.value < density.dpToPx(minListYOffset / 2)
         else swipedEnoughToJumpToNextItem()
     }
 
@@ -171,7 +171,7 @@ fun <E, T> JumpToNextItemList(
                                     if (skipDragEventCounter < 5) skipDragEventCounter++
                                     else {
                                         val dragAmount =
-                                            event.changes[0].let { it.position.y - it.previousPosition.y } / 3
+                                            event.changes[0].let { it.position.y - it.previousPosition.y } / 2
 
                                         // Log.d(TAG, "drag amount: $dragAmount")
                                         // Log.d(TAG, "canScrollForward: ${lazyListState.canScrollForward}")

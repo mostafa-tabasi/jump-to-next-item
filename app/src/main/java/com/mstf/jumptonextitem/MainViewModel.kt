@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlin.random.Random
 
 class MainViewModel : ViewModel() {
@@ -16,18 +17,20 @@ class MainViewModel : ViewModel() {
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     init {
-        _uiState.value = uiState.value.copy(
-            chats = listOf(
-                makeChat("Mr. Gray", "#455A64"),
-                makeChat("Mr. Brown", "#795548"),
-                makeChat("Mr. Orange", "#FB8C00"),
-                makeChat("Mr. Green", "#558B2F"),
-                makeChat("Mr. Teal", "#26A69A"),
-                makeChat("Mr. Blue", "#1565C0"),
-                makeChat("Mr. Purple", "#6A1B9A"),
-                makeChat("Mr. Red", "#F44336"),
-            ),
-        )
+        _uiState.update {
+            uiState.value.copy(
+                chats = listOf(
+                    makeChat("Mr. Brown", "#795548"),
+                    makeChat("Mr. Orange", "#FB8C00"),
+                    makeChat("Mr. Green", "#558B2F"),
+                    makeChat("Mr. Teal", "#26A69A"),
+                    makeChat("Mr. Blue Gray", "#455A64"),
+                    makeChat("Mr. Blue", "#1565C0"),
+                    makeChat("Mr. Purple", "#6A1B9A"),
+                    makeChat("Mr. Red", "#F44336"),
+                ),
+            )
+        }
     }
 
     private fun makeChat(
@@ -35,7 +38,7 @@ class MainViewModel : ViewModel() {
         tintHex: String,
         imageTint: Color = White,
     ): MainUiState.Chat {
-        val messagesCount = (5..10).random()
+        val messagesCount = (5..30).random()
         val unread = Random.nextBoolean()
 
         return MainUiState.Chat(
@@ -43,7 +46,7 @@ class MainViewModel : ViewModel() {
             image = R.drawable.ic_account,
             imageTint = imageTint,
             backgroundTintHex = tintHex,
-            messages = (3..messagesCount).map {
+            messages = (1..messagesCount).map {
                 var text = ""
                 repeat((15..75).random()) {
                     /*
@@ -58,18 +61,20 @@ class MainViewModel : ViewModel() {
                 MainUiState.Chat.Message(body = text, isReceived = Random.nextBoolean())
             },
             unread = unread,
-            firstUnreadIndex = if (unread) (1..messagesCount).random() else null,
+            firstUnreadIndex = if (unread) (0 until messagesCount / 3).random() else null,
         )
     }
 
     fun onChatSelect(chat: MainUiState.Chat) {
         val chatIndex = uiState.value.chats.indexOf(chat)
-        val updatedChat = chat.copy(unread = false, firstUnreadIndex = null)
+        val updatedChat = chat.copy(unread = false)
 
-        _uiState.value = uiState.value.copy(
-            chats = uiState.value.chats.toMutableList().also { it[chatIndex] = updatedChat },
-            selectedChat = updatedChat,
-        )
+        _uiState.update {
+            uiState.value.copy(
+                chats = uiState.value.chats.toMutableList().also { it[chatIndex] = updatedChat },
+                selectedChat = updatedChat,
+            )
+        }
     }
 }
 
