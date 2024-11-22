@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -65,6 +66,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsState()
 
+    val rootTopPadding by animateDpAsState(
+        targetValue = if (state.selectedChat == null) paddingValues.calculateTopPadding() else 0.dp,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "root_top_padding",
+    )
+
     val selectedChatBackgroundColor =
         if (state.selectedChat != null) Color(android.graphics.Color.parseColor(state.selectedChat!!.backgroundTintHex))
         else Color.Transparent
@@ -81,7 +88,7 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
             .background(Color.Gray)
             .padding(
                 bottom = paddingValues.calculateBottomPadding(),
-                top = if (state.selectedChat == null) paddingValues.calculateTopPadding() else 0.dp
+                top = rootTopPadding,
             ),
     ) {
         Row(
@@ -91,7 +98,8 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
         ) {
             AnimatedVisibility(
                 visible = state.selectedChat == null,
-                exit = fadeOut() + shrinkHorizontally(animationSpec = spring()),
+                exit = shrinkHorizontally(spring(stiffness = Spring.StiffnessHigh)) +
+                        fadeOut(spring(stiffness = Spring.StiffnessHigh)),
             ) {
                 ChatList(
                     modifier = Modifier
@@ -130,7 +138,7 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
         }
         AnimatedVisibility(
             visible = state.selectedChat != null,
-            enter = slideInVertically { fullHeight -> -fullHeight },
+            enter = slideInVertically(spring(stiffness = Spring.StiffnessMediumLow)) { fullHeight -> -fullHeight },
         ) {
             Box(
                 modifier = Modifier
