@@ -66,12 +66,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsState()
 
-    val rootTopPadding by animateDpAsState(
-        targetValue = if (state.selectedChat == null) paddingValues.calculateTopPadding() else 0.dp,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "root_top_padding",
-    )
-
     val selectedChatBackgroundColor =
         if (state.selectedChat != null) Color(android.graphics.Color.parseColor(state.selectedChat!!.backgroundTintHex))
         else Color.Transparent
@@ -88,7 +82,7 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
             .background(Color.Gray)
             .padding(
                 bottom = paddingValues.calculateBottomPadding(),
-                top = rootTopPadding,
+                top = if (state.selectedChat == null) paddingValues.calculateTopPadding() else 0.dp,
             ),
     ) {
         Row(
@@ -98,8 +92,8 @@ fun MainScreen(paddingValues: PaddingValues, viewModel: MainViewModel = viewMode
         ) {
             AnimatedVisibility(
                 visible = state.selectedChat == null,
-                exit = shrinkHorizontally(spring(stiffness = Spring.StiffnessHigh)) +
-                        fadeOut(spring(stiffness = Spring.StiffnessHigh)),
+                exit = shrinkHorizontally(spring(stiffness = Spring.StiffnessMediumLow)) +
+                        fadeOut(spring(stiffness = Spring.StiffnessMediumLow)),
             ) {
                 ChatList(
                     modifier = Modifier
