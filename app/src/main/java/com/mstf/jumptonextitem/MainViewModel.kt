@@ -24,7 +24,7 @@ class MainViewModel : ViewModel() {
                     makeChat("Mr. Orange", "#FB8C00"),
                     makeChat("Mr. Green", "#558B2F"),
                     makeChat("Mr. Teal", "#26A69A"),
-                    makeChat("Mr. Blue Gray", "#455A64"),
+                    makeChat("Mr. Gray", "#455A64"),
                     makeChat("Mr. Blue", "#1565C0"),
                     makeChat("Mr. Purple", "#6A1B9A"),
                     makeChat("Mr. Red", "#F44336"),
