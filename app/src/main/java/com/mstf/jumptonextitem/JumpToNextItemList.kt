@@ -81,6 +81,8 @@ fun <E, T> JumpToNextItemList(
     val nextItemLayoutBottomMargin = remember { Animatable(density.dpToPx(8.dp)) }
     val nextItemLayoutPadding = remember { Animatable(density.dpToPx(0.dp)) }
 
+    var arrowUpTopMargin by remember { mutableStateOf(16.dp) }
+
     var listHeight by remember { mutableIntStateOf(0) }
 
     var isAnimating by remember { mutableStateOf(false) }
@@ -123,13 +125,6 @@ fun <E, T> JumpToNextItemList(
         if (swipedEnoughToShowNextItemIcon().first) 50.dp
         else 0.dp,
         label = "next_item_size"
-    )
-
-    val arrowUpMargin by animateDpAsState(
-        targetValue =
-        if (swipedEnoughToShowNextItemIcon().first) 6.dp
-        else 0.dp,
-        label = "arrow_up_margin"
     )
 
     val swipeBackgroundColor by animateColorAsState(
@@ -288,6 +283,12 @@ fun <E, T> JumpToNextItemList(
                                                     isAnimating = false
                                                 }
                                             }
+
+                                            arrowUpTopMargin = lerp(
+                                                start = 16.dp,
+                                                stop = if (nextItem == null) 0.dp else 6.dp,
+                                                fraction = swipedEnoughToShowNextItemIcon().second,
+                                            )
                                         }
                                     }
                                 }
@@ -354,7 +355,7 @@ fun <E, T> JumpToNextItemList(
                         painterResource(R.drawable.ic_round_arrow_upward),
                         null,
                         tint = Color.White,
-                        modifier = Modifier.padding(top = arrowUpMargin)
+                        modifier = Modifier.padding(top = arrowUpTopMargin)
                     )
                 }
                 nextItemContent(nextItemIconSize, swipedEnoughToJumpToNextItem().first)
