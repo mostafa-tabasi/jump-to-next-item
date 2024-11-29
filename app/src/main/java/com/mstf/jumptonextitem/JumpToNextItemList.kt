@@ -160,7 +160,10 @@ fun <E, T> JumpToNextItemList(
                                     // we snap the values to default after the animation of sliding down is done
                                     if (swipedEnoughToJumpToNextItem().first) {
                                         scope.launch {
-                                            delay(250)
+                                            delay(125)
+                                            if (nextItem != null)
+                                                scope.launch { onJumpToNextItem(nextItem) }
+                                            delay(125)
                                             nextItemLayoutWidth.snapTo(scope, 0f)
                                             nextItemLayoutHeight.snapTo(scope, 0f)
                                             nextItemLayoutBottomMargin.snapTo(scope, density.dpToPx(8.dp))
@@ -173,14 +176,6 @@ fun <E, T> JumpToNextItemList(
                                         nextItemLayoutHeight.tweenAnimateTo(scope, 0f, 200)
                                         nextItemLayoutBottomMargin.tweenAnimateTo(scope, density.dpToPx(8.dp), 200)
                                         nextItemLayoutPadding.tweenAnimateTo(scope, density.dpToPx(0.dp), 200)
-                                    }
-
-                                    // user swiped enough for jumping to the next item
-                                    if (swipedEnoughToJumpToNextItem().first && nextItem != null) {
-                                        scope.launch {
-                                            delay(75)
-                                            onJumpToNextItem(nextItem)
-                                        }
                                     }
                                 }
 
@@ -279,14 +274,18 @@ fun <E, T> JumpToNextItemList(
 
                                         with(nextItemLayoutPadding) {
                                             when {
+                                                swipedEnoughToJumpToNextItem().first ->
+                                                    tweenAnimateTo(scope, 0f, 50)
+
                                                 isSwipingInSecondPhase().first ->
                                                     snapTo(
                                                         scope,
-                                                        powerCurveInterpolate(
-                                                            start = density.dpToPx(6.dp),
-                                                            end = 0f,
-                                                            t = isSwipingInSecondPhase().second,
-                                                            power = 7f,
+                                                        density.dpToPx(
+                                                            lerp(
+                                                                start = 6.dp,
+                                                                stop = 4.dp,
+                                                                fraction = isSwipingInSecondPhase().second,
+                                                            )
                                                         )
                                                     )
 
@@ -380,7 +379,7 @@ fun <E, T> JumpToNextItemList(
                     initialOffsetY = { fullHeight -> fullHeight },
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMedium
+                        stiffness = Spring.StiffnessMediumLow
                     ),
                 ),
                 exit = slideOutVertically(
