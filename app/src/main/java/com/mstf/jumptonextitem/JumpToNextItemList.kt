@@ -2,10 +2,8 @@ package com.mstf.jumptonextitem
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -38,6 +36,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -57,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.pow
 
 @Composable
 fun <E, T> JumpToNextItemList(
@@ -103,7 +103,7 @@ fun <E, T> JumpToNextItemList(
             listYOffset.value in density.dpToPx(minListYOffset)..density.dpToPx(minListYOffset * 2 / 3),
             (1 - ((listYOffset.value - density.dpToPx(minListYOffset)) /
                     (density.dpToPx(minListYOffset * 2 / 3) - density.dpToPx(minListYOffset))))
-                        .coerceIn(0f, 1f)
+                .coerceIn(0f, 1f)
         )
     }
 
@@ -120,19 +120,7 @@ fun <E, T> JumpToNextItemList(
         else swipedEnoughToJumpToNextItem()
     }
 
-    val nextItemIconSize by animateDpAsState(
-        targetValue =
-        if (swipedEnoughToShowNextItemIcon().first) 50.dp
-        else 0.dp,
-        label = "next_item_size"
-    )
-
-    val swipeBackgroundColor by animateColorAsState(
-        targetValue =
-        if (swipedEnoughToJumpToNextItem().first && nextItem != null) Color.White
-        else Color.LightGray,
-        label = "swipe_background_color"
-    )
+    var nextItemIconSize by remember { mutableStateOf(0.dp) }
 
     var skipDragEventCounter by remember { mutableIntStateOf(0) }
     val nestedScrollConnection = remember {
@@ -230,17 +218,6 @@ fun <E, T> JumpToNextItemList(
                                                     (nextItemLayoutWidth.value + -dragAmount / 2)
                                                         .coerceIn(0f, maxNextItemLayoutWidth.toPx())
                                                 )
-                                                nextItemLayoutPadding
-                                                    .snapTo(
-                                                        scope,
-                                                        density.dpToPx(
-                                                            lerp(
-                                                                start = 0.dp,
-                                                                stop = 6.dp,
-                                                                fraction = swipedEnoughToShowNextItemIcon().second,
-                                                            )
-                                                        )
-                                                    )
                                             }
 
                                             // user swiped enough for jumping to the next item,
@@ -257,7 +234,6 @@ fun <E, T> JumpToNextItemList(
                                                 )
                                                 nextItemLayoutBottomMargin
                                                     .tweenAnimateTo(scope, 0f, 200)
-                                                nextItemLayoutPadding.snapTo(scope, 0f)
 
                                                 scope.launch {
                                                     delay(200)
@@ -284,11 +260,49 @@ fun <E, T> JumpToNextItemList(
                                                 }
                                             }
 
-                                            arrowUpTopMargin = lerp(
-                                                start = 16.dp,
-                                                stop = if (nextItem == null) 0.dp else 6.dp,
-                                                fraction = swipedEnoughToShowNextItemIcon().second,
+                                        }
+
+                                        arrowUpTopMargin = lerp(
+                                            start = 16.dp,
+                                            stop = if (nextItem == null) 0.dp else 6.dp,
+                                            fraction = swipedEnoughToShowNextItemIcon().second,
+                                        )
+
+                                        nextItemIconSize = density.pxToDp(
+                                            powerCurveInterpolate(
+                                                start = 0f,
+                                                end = density.dpToPx(50.dp),
+                                                t = swipedEnoughToShowNextItemIcon().second,
+                                                power = 6f,
                                             )
+                                        )
+
+                                        with(nextItemLayoutPadding) {
+                                            when {
+                                                isSwipingInSecondPhase().first ->
+                                                    snapTo(
+                                                        scope,
+                                                        powerCurveInterpolate(
+                                                            start = density.dpToPx(6.dp),
+                                                            end = 0f,
+                                                            t = isSwipingInSecondPhase().second,
+                                                            power = 7f,
+                                                        )
+                                                    )
+
+                                                else -> {
+                                                    snapTo(
+                                                        scope,
+                                                        density.dpToPx(
+                                                            lerp(
+                                                                start = 0.dp,
+                                                                stop = 6.dp,
+                                                                fraction = swipedEnoughToShowNextItemIcon().second,
+                                                            )
+                                                        )
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -343,12 +357,12 @@ fun <E, T> JumpToNextItemList(
                     .height(density.pxToDp(nextItemLayoutHeight.value))
                     .width(density.pxToDp(nextItemLayoutWidth.value))
                     .padding(bottom = density.pxToDp(nextItemLayoutBottomMargin.value))
-                    .background(swipeBackgroundColor, shape = CircleShape)
+                    .conditional(!swipedEnoughToJumpToNextItem().first,
+                        { clip(shape = CircleShape) })
+                    .background(Color.LightGray, shape = CircleShape)
                     .padding(horizontal = density.pxToDp(nextItemLayoutPadding.value)),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement =
-                if (swipedEnoughToShowNextItemIcon().first) Arrangement.SpaceAround
-                else Arrangement.Center,
+                verticalArrangement = Arrangement.SpaceAround,
             ) {
                 AnimatedVisibility(!swipedEnoughToJumpToNextItem().first) {
                     Icon(
@@ -387,4 +401,8 @@ fun <E, T> JumpToNextItemList(
             }
         }
     }
+}
+
+private fun powerCurveInterpolate(start: Float, end: Float, t: Float, power: Float): Float {
+    return (start + (end - start) * t.pow(power))
 }

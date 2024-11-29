@@ -237,8 +237,10 @@ private fun Chat(
             AnimatedVisibility(
                 visible = chat.unread && showUnreadBadge,
                 modifier = Modifier.layoutId("unread_badge"),
-                enter = scaleIn(animationSpec = spring()),
-                exit = scaleOut(animationSpec = spring()),
+                enter = fadeIn(animationSpec = tween(250)) +
+                        scaleIn(animationSpec = tween(150, 100)),
+                exit = scaleOut(animationSpec = tween(250)) +
+                        fadeOut(animationSpec = tween(100, 150)),
                 label = "unread_badge"
             ) {
                 UnreadBadge(
