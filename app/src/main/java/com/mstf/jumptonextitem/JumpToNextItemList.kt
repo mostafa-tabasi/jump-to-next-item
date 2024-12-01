@@ -180,10 +180,10 @@ fun <E, T> JumpToNextItemList(
                                 }
 
                                 PointerEventType.Move -> {
-                                    if (skipDragEventCounter < 5) skipDragEventCounter++
+                                    if (skipDragEventCounter < 10) skipDragEventCounter++
                                     else {
                                         val dragAmount =
-                                            event.changes[0].let { it.position.y - it.previousPosition.y } / 2
+                                            event.changes[0].let { it.position.y - it.previousPosition.y } / 3
 
                                         // Log.d(TAG, "drag amount: $dragAmount")
                                         // Log.d(TAG, "canScrollForward: ${lazyListState.canScrollForward}")
@@ -274,6 +274,8 @@ fun <E, T> JumpToNextItemList(
 
                                         with(nextItemLayoutPadding) {
                                             when {
+                                                nextItem == null -> snapTo(scope, density.dpToPx(2.dp))
+
                                                 swipedEnoughToJumpToNextItem().first ->
                                                     tweenAnimateTo(scope, 0f, 50)
 
