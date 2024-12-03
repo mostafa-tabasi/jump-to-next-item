@@ -183,7 +183,7 @@ fun <E, T> JumpToNextItemList(
                                     if (skipDragEventCounter < 10) skipDragEventCounter++
                                     else {
                                         val dragAmount =
-                                            event.changes[0].let { it.position.y - it.previousPosition.y } / 3
+                                            event.changes[0].let { it.position.y - it.previousPosition.y } / 2
 
                                         // Log.d(TAG, "drag amount: $dragAmount")
                                         // Log.d(TAG, "canScrollForward: ${lazyListState.canScrollForward}")

@@ -23,10 +23,8 @@ class MainViewModel : ViewModel() {
                     makeChat("Mr. Brown", "#795548"),
                     makeChat("Mr. Orange", "#FB8C00"),
                     makeChat("Mr. Green", "#558B2F"),
-                    makeChat("Mr. Teal", "#26A69A"),
                     makeChat("Mr. Gray", "#455A64"),
                     makeChat("Mr. Blue", "#1565C0"),
-                    makeChat("Mr. Purple", "#6A1B9A"),
                     makeChat("Mr. Red", "#F44336"),
                 ),
             )
@@ -61,7 +59,7 @@ class MainViewModel : ViewModel() {
                 MainUiState.Chat.Message(body = text, isReceived = Random.nextBoolean())
             },
             unread = unread,
-            firstUnreadIndex = if (unread) (0 until messagesCount / 3).random() else null,
+            firstUnreadIndex = if (unread) (0 until messagesCount / 2).random() else null,
         )
     }
 
