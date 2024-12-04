@@ -40,6 +40,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -140,6 +142,7 @@ fun <E, T> JumpToNextItemList(
     Box(
         modifier = modifier
             .clipToBounds()
+            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
             .nestedScroll(nestedScrollConnection)
             .pointerInput(key1 = itemList, key2 = nextItem) {
                 coroutineScope {

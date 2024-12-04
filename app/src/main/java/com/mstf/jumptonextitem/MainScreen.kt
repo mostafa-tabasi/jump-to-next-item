@@ -17,7 +17,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,7 +48,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -164,7 +168,8 @@ private fun ChatList(
     onChatSelect: (MainUiState.Chat) -> Unit,
 ) {
     LazyColumn(
-        modifier,
+        modifier
+            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen),
         horizontalAlignment = Alignment.Start,
     ) {
         items(chats) { chat ->
@@ -172,7 +177,6 @@ private fun ChatList(
             Chat(
                 modifier = Modifier
                     .conditional(!isChatSelected, { clickable { onChatSelect(chat) } })
-                    .background(if (isChatSelected) Color.Gray.copy(alpha = 0.5f) else Color.LightGray)
                     .padding(8.dp),
                 chat = chat,
                 showTitle = selectedChat == null,
@@ -195,7 +199,6 @@ private fun Chat(
     ),
     showUnreadBadge: Boolean = true,
     unreadBadgeColor: Color = Color(android.graphics.Color.parseColor("#B71C1C")),
-    unreadBadgeBorderColor: Color = Color.LightGray,
     isChatSelected: Boolean = false,
 ) {
     val imageMargin by animateDpAsState(
@@ -245,7 +248,6 @@ private fun Chat(
             ) {
                 UnreadBadge(
                     unreadBadgeColor,
-                    unreadBadgeBorderColor,
                     chat.firstUnreadIndex,
                 )
             }
@@ -274,14 +276,20 @@ private fun Chat(
 @Composable
 private fun UnreadBadge(
     unreadBadgeColor: Color,
-    unreadBadgeBorderColor: Color,
     firstUnreadIndex: Int?,
 ) {
     Box(
         modifier = Modifier
+            .drawWithContent {
+                drawContent()
+                drawCircle(
+                    color = Color.Black,
+                    style = Stroke(2.dp.toPx()),
+                    blendMode = BlendMode.Clear,
+                )
+            }
             .sizeIn(minWidth = 20.dp)
-            .background(unreadBadgeColor, shape = CircleShape)
-            .border(width = 2.dp, color = unreadBadgeBorderColor, shape = CircleShape),
+            .background(unreadBadgeColor, shape = CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         val unreadCount =
@@ -353,7 +361,6 @@ private fun ChatMessages(
                 showTitle = false,
                 showUnreadBadge = swipedEnough,
                 unreadBadgeColor = Color.LightGray,
-                unreadBadgeBorderColor = Color.White,
                 isChatSelected = true,
             )
         },
